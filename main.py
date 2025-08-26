@@ -5,7 +5,13 @@ import re
 URL = "https://firebase.google.com/support/release-notes/android"
 
 
-def fetch_release_notes(library_name="Cloud Firestore"):
+def parse_version(v: str):
+    return tuple(map(int, v.split(".")))
+
+
+def fetch_release_notes(library_name="Crashlytics",
+                        start_version=None,
+                        end_version=None):
     resp = requests.get(URL)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
@@ -23,12 +29,18 @@ def fetch_release_notes(library_name="Cloud Firestore"):
         """Save accumulated changes for a version."""
         nonlocal current_lib, current_version, current_update_date, current_changes
         if current_lib and current_version and current_changes:
-            results.append({
-                "library": current_lib,
-                "version": current_version,
-                "date": current_update_date,
-                "changes": current_changes
-            })
+            v_tuple = parse_version(current_version)
+            if start_version and v_tuple < parse_version(start_version):
+                pass
+            elif end_version and v_tuple > parse_version(end_version):
+                pass
+            else:
+                results.append({
+                    "library": current_lib,
+                    "version": current_version,
+                    "date": current_update_date,
+                    "changes": current_changes
+                })
         current_lib, current_version, current_changes = None, None, []
 
     for el in content.find_all(["h2", "h3", "ul"], recursive=False):
@@ -66,7 +78,7 @@ def fetch_release_notes(library_name="Cloud Firestore"):
 
 
 if __name__ == "__main__":
-    notes = fetch_release_notes("Crashlytics")
+    notes = fetch_release_notes("Remote Config", start_version="21.4.1")
     for n in notes:
         print(f"\n[{n['date']}] {n['library']} {n['version']}")
         for change in n["changes"]:
