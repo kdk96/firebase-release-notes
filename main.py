@@ -1,3 +1,6 @@
+import argparse
+import json
+import csv
 import requests
 from bs4 import BeautifulSoup
 import re
@@ -9,7 +12,7 @@ def parse_version(v: str):
     return tuple(map(int, v.split(".")))
 
 
-def fetch_release_notes(library_name="Crashlytics",
+def fetch_release_notes(library_name: str,
                         start_version=None,
                         end_version=None):
     resp = requests.get(URL)
@@ -78,7 +81,22 @@ def fetch_release_notes(library_name="Crashlytics",
 
 
 if __name__ == "__main__":
-    notes = fetch_release_notes("Remote Config", start_version="21.4.1")
+    parser = argparse.ArgumentParser(
+        description="Scrape Firebase Android SDK release notes for a library."
+    )
+    parser.add_argument("--library", "-l", required=True,
+                        help="Library name (e.g. 'Cloud Firestore', 'Authentication')")
+    parser.add_argument("--start-version", "-s", default=None,
+                        help="Start version (inclusive), e.g. 24.0.0")
+    parser.add_argument("--end-version", "-e", default=None,
+                        help="End version (inclusive), e.g. 25.0.0")
+
+    args = parser.parse_args()
+
+    notes = fetch_release_notes(args.library,
+                                start_version=args.start_version,
+                                end_version=args.end_version)
+
     for n in notes:
         print(f"\n[{n['date']}] {n['library']} {n['version']}")
         for change in n["changes"]:
